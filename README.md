@@ -8,6 +8,27 @@ Players progress through a linear sequence of levels, encountering enemies, boss
 
 **No external game engine was used**, the project was built entirely from the ground up to explore core game programming concepts such as rendering, state management, entity systems, and narrative flow.
 
+## How to Run the Game
+
+1. Download or clone the repository
+2. Make sure **Java 17 or newer** is installed
+3. Extract the ZIP and either:
+   - Double-click **Burn.jar**, or
+   - Run the following command from the project folder:
+     ```bash
+     java -jar Burn.jar
+     ```
+4. Choose your difficulty and click the play button
+
+> The `assets/` and `cutscenes/` folders must remain in the same directory as `Burn.jar`.
+
+## Controls
+**W A S D** – Move  
+**Mouse Move** - Aim  
+**Left Click** – Attack  
+**Scroll Wheel** – Switch weapon  
+**R** – Reload  
+**ESC** – Pause
 ## Gameplay & Story Structure
 - Linear, level-based progression
 - Story delivery through:
