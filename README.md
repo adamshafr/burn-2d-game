@@ -20,7 +20,7 @@ Players progress through a linear sequence of levels, encountering enemies, boss
      ```
 4. Choose your difficulty and click the play button
 
-> The `assets/` and `cutscenes/` folders must remain in the same directory as `Burn.jar`.
+> The asset folders must remain in the same directory as `Burn.jar`.
 
 ## Controls
 **W A S D** – Move  
