@@ -44,7 +44,7 @@ The game emphasizes atmosphere, progression, and storytelling alongside mechanic
 
 ### Adam Shafronsky
 **Lead Programmer & Game Designer**
-- Implemented the majority of the codebase (~90–95%)
+- Implemented the majority of the codebase (~90%)
 - Designed and implemented the core game architecture
 - Built the custom game loop, rendering pipeline, and input handling system
 - Implemented:
