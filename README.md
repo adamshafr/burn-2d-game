@@ -19,6 +19,7 @@ Players progress through a linear sequence of levels, encountering enemies, boss
      java -jar Burn.jar
      ```
 4. Choose your difficulty and click the play button
+5. Look at the current objective in the bottom right corner to figure out what to do
 
 > The asset folders must remain in the same directory as `Burn.jar`.
 
