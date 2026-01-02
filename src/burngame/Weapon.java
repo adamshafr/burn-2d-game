@@ -119,12 +119,21 @@ public class Weapon {
                 this.clip = 24;
    }
    
+   private boolean isLoud(boolean enemy){
+       return (name.equals("Rifle")|| ((name.equals("Pistol")) && enemy));
+   }
+   
 public void shoot(int x, int y, int startX, int startY, boolean enemy) throws UnsupportedAudioFileException { //x and y is the x and y to shoot at.
 //This is the main part of the weapon class, shooting. shooting works by making a line and checking for intersections on that line using point2d. It then finds the closest of the intersections and
 //that is where it will draw the spark (or damage enemy/player if it hits one of them first)
     if (!canShoot(enemy)) return; //does not shoot if cannot shoot
     if (name.equals("Rifle")) clip--; //lowers clip if rifle
     Main.playSound(name); //plays sound
+     if (isLoud(enemy) && Main.level != null) {
+        int worldShotX = startX + Main.worldX;
+        int worldShotY = startY + Main.worldY;
+        Main.level.alertEnemies(worldShotX, worldShotY);
+    }
     Enemy damageEnemy = null;
     // Adjust position to world coordinates
     int adjustedX = x + Main.worldX;

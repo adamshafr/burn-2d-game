@@ -15,6 +15,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import java.awt.Point;
+import java.util.List;
 
 
 /**
@@ -44,14 +46,39 @@ public class Enemy {
     private int speed;
     private Image bodyImage;
     private int speedChange;
-private double distance;
+    private double distance;
+    private boolean stat;
+    
+    
+    private enum AIState { IDLE, ALERTED, CHASING, SHOOTING }
+
+private AIState aiState = AIState.IDLE;
+
+public List<Point> path = null;
+private int pathIndex = 0;
+private int replanCooldown = 0;
+
+private Point lastKnownPlayerPos = null;
+
+private boolean isGunEnemy;
+private final int HEARING_RADIUS = 2000;
+private final int REPLAN_DELAY = 15;
+
+private final int GUN_MIN_DIST = 140;
+private final int GUN_MAX_DIST = 420;
+
+
+
+
 public int extraDiff = 0;
-    public Enemy(int x, int y, String type, int lvl) {
+    public Enemy(int x, int y, String type, int lvl, boolean stat) {
         this.x = x;
         this.y = y;
         this.health = 30; // Default health
         this.weapon = new Weapon(type, true);
         this.level = lvl;
+        this.stat = stat;
+        isGunEnemy = !weapon.getName().equals("Knife");
         lineofsight = new Line2D.Double(960, 540, x-Main.worldX, y-Main.worldY);
         // Load the enemy image
         try {
@@ -150,6 +177,10 @@ public int extraDiff = 0;
             }
             
         }
+        if (stat){
+            speed = 0;
+            speedChange = 0;
+        }
     }
     
     private int getImageLevel(){ //this gets the imagelevel for file names, since in some levels enemies use the same image as others (vladimir and dimitris guards, ronans guards)
@@ -162,6 +193,8 @@ public int extraDiff = 0;
     // Draw the enemy on the screen
     public void draw(Graphics g) { //draws the enemy
         if (health <=0)return;
+        checkSight();
+        updateAI();
         updateRotation();
         // Convert the enemy's world position to screen position
         int screenX = x - Main.worldX;
@@ -173,17 +206,15 @@ public int extraDiff = 0;
         // Draw the enemy image
         g2d.drawImage(enemyImage, screenX - enemyImage.getWidth(null) / 2, screenY - enemyImage.getHeight(null) / 2, null);
         g2d.setTransform(oldTransform);
-        checkSight();
-        if (canSee){
-         long currentTime = System.currentTimeMillis();
-         moveToPlayer();
-        if (lastSeenTime != -1 && currentTime - lastSeenTime >= reactionTime) {
-            shoot(); // Shoot at the player
+        
+
+        if (canSee) {
+            long currentTime = System.currentTimeMillis();
+            if (lastSeenTime != -1 && currentTime - lastSeenTime >= reactionTime) {
+                shoot();
+            }
         }
-        if ((currentTime - lastSeenTime)<= 1000){
-            moveToPlayer();
-        }
-        }
+
         
         if (bloodDraw){
             g2d.drawImage(imgblood,screenX-(imgblood.getWidth(null)/2),screenY-(imgblood.getHeight(null)/2),null);
@@ -204,93 +235,146 @@ public int extraDiff = 0;
     }
 
 
-    private void updateSpeed(){ //if
-        if (this.weapon.getName().equals("Knife")){
-            speed = 7 + speedChange;
-        }
+    private void updateSpeed(){ 
+    if (stat) {
+        // Stationary enemy - never moves
+        speed = 0;
+    } else {
+        // Normal enemy - use speed calculation
+        speed = 7 + speedChange;
     }
+}
     
-    private void updateRotation(){
-        if (Main.getPlayer().playable){
-        if (canSee){
-             int enemyCenterX = x + enemyImage.getWidth(null) / 2;
-               int enemyCenterY = y + enemyImage.getHeight(null) / 2;
+private void updateRotation(){
+    if (Main.getPlayer().playable) {
+        // ALWAYS face player when they can see them
+        if (canSee) {
+            int enemyCenterX = x + enemyImage.getWidth(null) / 2;
+            int enemyCenterY = y + enemyImage.getHeight(null) / 2;
 
-        // Player is always at (960, 540) in screen coordinates
-        angle = Math.atan2(540 - (enemyCenterY - Main.worldY), 960 - (enemyCenterX - Main.worldX))+1.57;
-        }
+            angle = Math.atan2(
+                (540 + Main.worldY) - enemyCenterY,
+                (960 + Main.worldX) - enemyCenterX
+            ) + 1.57;
+        } else {
+            // When pathfinding, face the direction we're actually moving
+            // Calculate movement direction from current frame
+            double dx = 0;
+            double dy = 0;
+            
+            if (path != null && pathIndex < path.size()) {
+                Point target = path.get(pathIndex);
+                dx = target.x - x;
+                dy = target.y - y;
+            } else if (aiState == AIState.CHASING && lastKnownPlayerPos != null) {
+                dx = lastKnownPlayerPos.x - x;
+                dy = lastKnownPlayerPos.y - y;
+            }
+            
+            // Only update angle if we're actually moving somewhere
+            if (dx != 0 || dy != 0) {
+                angle = Math.atan2(dy, dx) + 1.57;
+            }
+            // If not moving, keep current angle
         }
     }
+}
     
-    // Getter for health (optional)
+    // Getter for health 
     public int getHealth() {
         return health;
     }
     
-    public void shoot() {
-        if (Main.level.cutsceneHappened) return;
-        if (Main.getPlayer().playable){
-        if (this.weapon.getName().equals("Knife")&&distance>100){
-            return;
-        }
-        if(this.weapon.getName().equals("Knife")){
+    public void setSpeed(int x){
+        speed = x;
+    }
+    
+public void shoot() {
+    if (Main.level.cutsceneHappened) return;
+    if (Main.getPlayer().playable){
+        // FOR KNIFE ENEMIES: Only attack when very close
+        if (this.weapon.getName().equals("Knife")){
+            if (distance > 60) { // Attack range for knife
+                return;
+            }
             iter = 40;
         }
+        
         // Base target is the player at the center of the screen
         int targetX = 960; 
         int targetY = 540; 
 
         // Apply accuracy offset
-        double maxOffset = (2.0 - accuracy) * 200; // Maximum offset based on accuracy
+        double maxOffset = (2.0 - accuracy) * 200;
         double rand = Math.random();
         if (rand >= accuracy){
-        targetX += (int) ((Math.random() * 2) * maxOffset); // Random offset between -maxOffset and +maxOffset
-        targetY += (int) ((Math.random() * 2) * maxOffset);
+            targetX += (int) ((Math.random() * 2) * maxOffset);
+            targetY += (int) ((Math.random() * 2) * maxOffset);
         }
         try {
-            // Call weapon's shoot method with adjusted target
             weapon.shoot(targetX, targetY, x - Main.worldX, y - Main.worldY, true);
         } catch (UnsupportedAudioFileException ex) {
             Logger.getLogger(Enemy.class.getName()).log(Level.SEVERE, null, ex);
         }
-        }
     }
+}
 
-    private void checkSight() { //Line of sight check
-        lineofsight = new Line2D.Double(960, 540, x - Main.worldX, y - Main.worldY);
-        canSee = true; // Assume clear sight unless proven otherwise
-        Rectangle enemyBounds = this.getBounds();
-        enemyBounds.x -= Main.worldX;
-        enemyBounds.y -= Main.worldY;
-
-        // Check if enemy is within the visible screen bounds
-        if (!enemyBounds.intersects(new Rectangle(0, 0, 1920, 1080))) {
-            canSee = false;
-        }
-
-        // Check if any walls block the line of sight
-        for (Wall wall : Main.walls) {
-            if (wall.isHardwall()){
-            Rectangle bounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
-
+private void checkSight() {
+    // Calculate distance to player (add this at the beginning)
+    double dxToPlayer = (960 + Main.worldX) - x;
+    double dyToPlayer = (540 + Main.worldY) - y;
+    distance = Math.sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer);
+    
+    // First, check if enemy is on screen (player can see enemy)
+    Rectangle enemyBounds = this.getBounds();
+    enemyBounds.x -= Main.worldX;
+    enemyBounds.y -= Main.worldY;
+    
+    // Enemy must be on screen to see player
+    if (!enemyBounds.intersects(new Rectangle(0, 0, 1920, 1080))) {
+        canSee = false;
+        lastSeenTime = -1;
+        return;
+    }
+    
+    // Player's world position
+    int playerWorldX = 960 + Main.worldX;
+    int playerWorldY = 540 + Main.worldY;
+    
+    // Enemy's world position
+    int enemyWorldX = x;
+    int enemyWorldY = y;
+    
+    // Create line from enemy to player IN WORLD COORDINATES
+    lineofsight = new Line2D.Double(enemyWorldX, enemyWorldY, 
+                                   playerWorldX, playerWorldY);
+    
+    canSee = true; // Assume clear sight
+    
+    // Check if any hardwalls block the line of sight
+    for (Wall wall : Main.walls) {
+        if (wall.isHardwall()) {
+            Rectangle bounds = new Rectangle(wall.x, wall.y, wall.width, wall.height);
+            
             if (lineofsight.intersects(bounds)) {
                 canSee = false; // Line of sight blocked
                 break;
             }
         }
-        }
-        // Update hostility and reaction time
-        if (canSee) {
-            if (lastSeenTime == -1) {
-                lastSeenTime = System.currentTimeMillis(); // Record first sighting time
-            }
-        } else {
-            lastSeenTime = -1; // Reset if the player is not visible
-        }
-        
     }
-
+    
+    // Update last seen time
+    if (canSee) {
+        if (lastSeenTime == -1) {
+            lastSeenTime = System.currentTimeMillis();
+        }
+    } else {
+        lastSeenTime = -1;
+    }
+}
+/*
     public void moveToPlayer() { //moves to player (not proper pathfinding for now, just kinda stupidly walk towards player when they see them
+        if (path != null) return;
         if (Main.level.cutsceneHappened) return;
         if (Main.getPlayer().playable){
         // Calculate the direction vector from the enemy to the player
@@ -319,59 +403,129 @@ public int extraDiff = 0;
                 iter += 40;
             }
         }
-        resolveCollisions();
         }
     }
- public void resolveCollisions() { //same exact resolve collisions method as the player has, and the same pushout method
-     Rectangle hitbox = this.getBounds();
-     hitbox.x -= Main.worldX;
-     hitbox.y -= Main.worldY;
-     Rectangle playerHitbox = Main.getPlayerBounds();
-     pushOut(hitbox,playerHitbox);
-        
-        for (Enemy e : Main.enemies){ //pushout for other enemies, the player, and the walls
-            if (e != this){
-                
+*/
+ public void resolveCollisions() {
+    // Use axis-aligned bounding box for collision resolution
+    Rectangle hitbox = new Rectangle(x - 50, y - 17, 100, 33);
+    hitbox.x -= Main.worldX;
+    hitbox.y -= Main.worldY;
+    
+    // Save original position
+    int originalX = x;
+    int originalY = y;
+    
+    /* Check collision with player
+    Rectangle playerHitbox = Main.getPlayerBounds();
+    pushOut(hitbox, playerHitbox);
+    
+    // Check collision with other enemies
+    for (Enemy e : Main.enemies) {
+        if (e != this) {
             Rectangle enemyBounds = e.getBounds();
             enemyBounds.x -= Main.worldX;
             enemyBounds.y -= Main.worldY;
-            pushOut(hitbox,enemyBounds);
+            pushOut(hitbox, enemyBounds);
         }
-        }
+    }
+    */
+    // Check collision with walls
+    for (Wall wall : Main.walls) {
+        Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
+        pushOut(hitbox, wallBounds);
+    }
+    
+    // If we got pushed back significantly, we might be at a corner
+    // Try to slide along the wall instead
+    double moveX = x - originalX;
+    double moveY = y - originalY;
+    double moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
+    
+    // If we tried to move but got pushed back a lot, we're at a corner
+    if (moveDistance < speed * 0.3 && (Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1)) {
+        // Try sliding perpendicular to the wall
+        trySlideAroundCorner(originalX, originalY);
+    }
+}
+
+private void trySlideAroundCorner(int originalX, int originalY) {
+    // Try moving in 8 directions to get unstuck from corner
+    int[][] directions = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1},  // Cardinal
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1} // Diagonal
+    };
+    
+    for (int[] dir : directions) {
+        int testX = originalX + dir[0] * 5;
+        int testY = originalY + dir[1] * 5;
         
+        Rectangle testHitbox = new Rectangle(testX - 50, testY - 17, 100, 33);
+        testHitbox.x -= Main.worldX;
+        testHitbox.y -= Main.worldY;
+        
+        boolean collision = false;
+        
+        // Check walls
         for (Wall wall : Main.walls) {
             Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
-            pushOut(hitbox, wallBounds);
+            if (testHitbox.intersects(wallBounds)) {
+                collision = true;
+                break;
+            }
         }
-    }
-
- 
- private void pushOut(Rectangle hitbox, Rectangle2D wallBounds){
-     if (hitbox.intersects(wallBounds)) {
-                double disX, disY;
-
-                // Horizontal collision
-                if (hitbox.getCenterX() < wallBounds.getCenterX()) {
-                    disX = wallBounds.getMinX() - hitbox.getMaxX();
-                } else {
-                    disX = wallBounds.getMaxX() - hitbox.getMinX();
-                }
-
-                // Vertical collision
-                if (hitbox.getCenterY() < wallBounds.getCenterY()) {
-                    disY = wallBounds.getMinY() - hitbox.getMaxY();
-                } else {
-                    disY = wallBounds.getMaxY() - hitbox.getMinY();
-                }
-
-                // Apply the smaller push-out value
-                if (Math.abs(disX) < Math.abs(disY)) {
-                    x += disX;
-                } else {
-                    y += disY;
+        
+        // Check other enemies
+        if (!collision) {
+            for (Enemy e : Main.enemies) {
+                if (e != this) {
+                    Rectangle enemyBounds = e.getBounds();
+                    enemyBounds.x -= Main.worldX;
+                    enemyBounds.y -= Main.worldY;
+                    if (testHitbox.intersects(enemyBounds)) {
+                        collision = true;
+                        break;
+                    }
                 }
             }
+        }
+        
+        if (!collision) {
+            // This direction is clear, move there
+            x = testX;
+            y = testY;
+            return;
+        }
     }
+}
+
+ 
+ private void pushOut(Rectangle hitbox, Rectangle2D wallBounds) {
+    if (hitbox.intersects(wallBounds)) {
+        double disX, disY;
+        
+        // Calculate overlap in both directions
+        double overlapLeft = hitbox.getMaxX() - wallBounds.getMinX();
+        double overlapRight = wallBounds.getMaxX() - hitbox.getMinX();
+        double overlapTop = hitbox.getMaxY() - wallBounds.getMinY();
+        double overlapBottom = wallBounds.getMaxY() - hitbox.getMinY();
+        
+        // Find the smallest overlap
+        disX = (overlapLeft < overlapRight) ? -overlapLeft : overlapRight;
+        disY = (overlapTop < overlapBottom) ? -overlapTop : overlapBottom;
+        
+        // Apply the smaller push-out value
+        if (Math.abs(disX) < Math.abs(disY)) {
+            x += disX;
+        } else {
+            y += disY;
+        }
+        
+        // Update hitbox position for subsequent checks
+        hitbox.x = x - 50 - Main.worldX;
+        hitbox.y = y - 17 - Main.worldY;
+    }
+}
  
  
         public int get(String xy){ //get the x or y.
@@ -379,5 +533,280 @@ public int extraDiff = 0;
             if (xy.equals("y")) return y;
             return 1;
         }
+        
+public void hearGunshot(int gx, int gy) {
+    double dx = gx - x;
+    double dy = gy - y;
+    double distanceSquared = dx*dx + dy*dy;
+    
+    // Only alert if within hearing radius
+    if (distanceSquared <= HEARING_RADIUS * HEARING_RADIUS) {
+        lastKnownPlayerPos = new Point(gx, gy);
+        if (!canSee) { // Only use pathfinding if we can't see player
+            aiState = AIState.ALERTED;
+            replanCooldown = 0;
+            path = null; // Clear old path
+        }
+    }
+}
+
+public void updateAI() {
+    if (!Main.getPlayer().playable || Main.level.cutsceneHappened || stat) return;
+
+    // Calculate distance to player
+    double dxToPlayer = (960 + Main.worldX) - x;
+    double dyToPlayer = (540 + Main.worldY) - y;
+    distance = Math.sqrt(dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer);
+    
+    // DEBUG
+    if (Main.debugMode && Main.counter == 0 && !Main.enemies.isEmpty() && this == Main.enemies.get(0)) {
+        System.out.println("Enemy AI - State: " + aiState + 
+                         " CanSee: " + canSee + 
+                         " Distance: " + (int)distance +
+                         " Path: " + (path != null ? path.size() : 0));
+    }
+
+    // Update AI state based on sight
+    if (canSee) {
+        lastKnownPlayerPos = new Point(960 + Main.worldX, 540 + Main.worldY);
+        
+        if (isGunEnemy) {
+            aiState = AIState.CHASING;
+        } else {
+            // KNIFE ENEMY: When we see player, just walk straight toward them
+            aiState = AIState.SHOOTING; // Use SHOOTING state for direct movement
+        }
+        replanCooldown = 0;
+    } else if (lastKnownPlayerPos != null) {
+        // Can't see player but have a last known position
+        aiState = AIState.ALERTED;
+        
+        // Check if we've reached the last known position
+        double distToLastKnown = Math.sqrt(
+            Math.pow(lastKnownPlayerPos.x - x, 2) + 
+            Math.pow(lastKnownPlayerPos.y - y, 2)
+        );
+        
+        if (distToLastKnown < 50) {
+            // We've reached the last known position and player isn't here
+            // Look around briefly, then give up
+            if (replanCooldown > 60) {
+                lastKnownPlayerPos = null;
+                aiState = AIState.IDLE;
+                path = null;
+            }
+        }
+    } else {
+        aiState = AIState.IDLE;
+    }
+
+    // Decrease replan cooldown
+    if (replanCooldown > 0) replanCooldown--;
+
+    // Handle pathfinding for ALERTED state (when we heard something but can't see)
+    if (aiState == AIState.ALERTED && lastKnownPlayerPos != null && replanCooldown == 0) {
+        
+        // Check if we need a new path
+        boolean needNewPath = (path == null || path.isEmpty());
+        if (!needNewPath && pathIndex < path.size()) {
+            Point currentTarget = path.get(pathIndex);
+            double distToTarget = Math.sqrt(
+                Math.pow(currentTarget.x - x, 2) + 
+                Math.pow(currentTarget.y - y, 2)
+            );
+            needNewPath = (distToTarget > 100);
+        }
+        
+        if (needNewPath) {
+            path = Main.level.getPathFinder().findPath(x, y, lastKnownPlayerPos.x, lastKnownPlayerPos.y, this);
+            pathIndex = 0;
+            replanCooldown = REPLAN_DELAY;
+            
+            if (Main.debugMode && path != null) {
+                System.out.println("New path found with " + path.size() + " points");
+            }
+        }
+    }
+
+    // Handle movement based on state and enemy type
+    if (isGunEnemy) {
+        // GUN ENEMY LOGIC (same as before)
+        if (canSee) {
+            if (distance < GUN_MIN_DIST) {
+                // Too close - move away
+                aiState = AIState.CHASING;
+                double angleToPlayer = Math.atan2(dyToPlayer, dxToPlayer);
+                lastKnownPlayerPos = new Point(
+                    (int)(x - Math.cos(angleToPlayer) * GUN_MIN_DIST * 1.5),
+                    (int)(y - Math.sin(angleToPlayer) * GUN_MIN_DIST * 1.5)
+                );
+                replanCooldown = 0;
+            } else if (distance > GUN_MAX_DIST) {
+                // Too far - move closer
+                aiState = AIState.CHASING;
+                lastKnownPlayerPos = new Point(960 + Main.worldX, 540 + Main.worldY);
+                replanCooldown = 0;
+            } else {
+                // Perfect distance - shoot!
+                aiState = AIState.SHOOTING;
+                path = null;
+            }
+        }
+        
+        // Gun enemies use pathfinding for chasing
+        if ((aiState == AIState.CHASING || aiState == AIState.ALERTED) && lastKnownPlayerPos != null) {
+            followPath();
+        }
+    } else {
+        // KNIFE ENEMY SIMPLE LOGIC
+        if (canSee) {
+            // SIMPLE: Just walk straight toward player when we can see them
+            if (distance > 50) { // Get very close (50 units)
+                // Move directly toward player
+                double moveX = (dxToPlayer / distance) * speed;
+                double moveY = (dyToPlayer / distance) * speed;
+                
+                // Check for and avoid other enemies
+                for (Enemy e : Main.enemies) {
+                    if (e == this || e == null || e.health <= 0) continue;
+                    
+                    double dxToEnemy = e.x - x;
+                    double dyToEnemy = e.y - y;
+                    double distToEnemy = Math.sqrt(dxToEnemy*dxToEnemy + dyToEnemy*dyToEnemy);
+                    
+                    // If enemy is too close, push away from them
+                    if (distToEnemy < 80 && distToEnemy > 0) {
+                        double pushStrength = 1.5 * (1.0 - (distToEnemy / 80.0));
+                        moveX -= (dxToEnemy / distToEnemy) * pushStrength;
+                        moveY -= (dyToEnemy / distToEnemy) * pushStrength;
+                    }
+                }
+                
+                // Normalize movement after avoidance
+                double moveDist = Math.sqrt(moveX*moveX + moveY*moveY);
+                if (moveDist > 0) {
+                    moveX = (moveX / moveDist) * speed;
+                    moveY = (moveY / moveDist) * speed;
+                }
+                
+                x += moveX;
+                y += moveY;
+                
+                // Animation
+                aniframe(strip, "Knife");
+                if (iter == 360) iter = 80;
+                if (Main.counter == 6) iter += 40;
+            }
+            // If distance <= 50, we're close enough, just shoot (attacks will happen automatically)
+        } else if (aiState == AIState.ALERTED && lastKnownPlayerPos != null) {
+            // Can't see player, but heard something - use pathfinding
+            followPath();
+        }
+    }
+    
+    
+    avoidOtherEnemies();
+    // Always resolve collisions
+    resolveCollisions();
+}
+
+
+
+private void followPath() {
+    if (path != null && pathIndex < path.size()) {
+        Point target = path.get(pathIndex);
+        
+        double dx = target.x - x;
+        double dy = target.y - y;
+        double dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < 15) {
+            pathIndex++;
+            if (pathIndex >= path.size()) {
+                path = null;
+            }
+        } else {
+            // Move toward waypoint
+            x += (dx / dist) * speed;
+            y += (dy / dist) * speed;
+            
+            // Animation for knife enemies
+            if (weapon.getName().equals("Knife")) {
+                aniframe(strip, "Knife");
+                if (iter == 360) iter = 80;
+                if (Main.counter == 6) iter += 40;
+            }
+        }
+    }
+}
+
+private void avoidOtherEnemies() {
+    if (Main.enemies == null || Main.enemies.size() <= 1) return;
+    
+    // Save original position
+    int originalX = x;
+    int originalY = y;
+    
+    double avoidX = 0;
+    double avoidY = 0;
+    int avoidCount = 0;
+    
+    for (Enemy e : Main.enemies) {
+        if (e == this || e == null || e.getHealth() <= 0) continue;
+        
+        double dx = e.x - x;
+        double dy = e.y - y;
+        double distance = Math.sqrt(dx*dx + dy*dy);
+        
+        // Avoid enemies that are too close (within 80 units)
+        if (distance > 0 && distance < 80) {
+            // Push away from the other enemy
+            avoidX -= (dx / distance) * (1.0 - distance/80.0);
+            avoidY -= (dy / distance) * (1.0 - distance/80.0);
+            avoidCount++;
+        }
+    }
+    
+    if (avoidCount > 0) {
+        // Apply avoidance movement
+        avoidX /= avoidCount;
+        avoidY /= avoidCount;
+        
+        // Normalize and scale by a reasonable amount
+        double avoidDist = Math.sqrt(avoidX*avoidX + avoidY*avoidY);
+        if (avoidDist > 0) {
+            avoidX = (avoidX / avoidDist) * 3.0; // Small, safe amount
+            avoidY = (avoidY / avoidDist) * 3.0;
+            
+            // TEST the new position first
+            int testX = x + (int)avoidX;
+            int testY = y + (int)avoidY;
+            
+            // Create a test hitbox
+            Rectangle testHitbox = new Rectangle(testX - 50, testY - 17, 100, 33);
+            testHitbox.x -= Main.worldX;
+            testHitbox.y -= Main.worldY;
+            
+            boolean collision = false;
+            
+            // Check walls
+            for (Wall wall : Main.walls) {
+                Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
+                if (testHitbox.intersects(wallBounds)) {
+                    collision = true;
+                    break;
+                }
+            }
+            
+            // Only apply avoidance if it won't cause wall collision
+            if (!collision) {
+                x = testX;
+                y = testY;
+            }
+            // If it would cause collision, don't move (stay in original position)
+        }
+    }
+}
+
 }
 

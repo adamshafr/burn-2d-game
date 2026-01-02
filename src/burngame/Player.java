@@ -203,14 +203,14 @@ public class Player {
     //this works by checking the shortest distance the player needs to be pushed out by so they are not in the wall anymore, then applying it
     public void resolveCollisions() {
         Rectangle2D playerHitbox = this.getRotatedHitbox();
-
+        /*
          for (Enemy e : Main.enemies){
             Rectangle enemyBounds = e.getBounds();
             enemyBounds.x -= Main.worldX;
             enemyBounds.y -= Main.worldY;
             pushOut(playerHitbox,enemyBounds);
         }
-        
+        */
         
         for (Wall wall : Main.walls) {
             Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);

@@ -1,9 +1,12 @@
 
 package burngame;
 
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
@@ -61,12 +64,13 @@ public class Main extends javax.swing.JFrame {
     public static boolean missionFailed;
     private static boolean canRestart = false;
     private static boolean failScreen = false;
+    public static boolean debugMode = false;
 
     
     //DEVELOPER VARIABLES
     private boolean showWalls = false; // Toggle visibility of walls for testing
     private boolean editMode = false; //Toggle edit mode for world building
-    private boolean softwall = true; // toggle making softwalls or not
+    private boolean softwall = false; // toggle making softwalls or not
     //Wall building variables
     private int k = 0;
     private int xs[] = new int[2];
@@ -303,7 +307,7 @@ public class Main extends javax.swing.JFrame {
           }
         if (evt.getKeyCode()==KeyEvent.VK_B){
         //	for testing purposes THIS ALSO CAUSES LEVELS TO BUG ONLY USE IT FOR BUILDING AND TESTING, THERE ARE NO FOUND BUGS DURING REGULAR GAMEPLAY ONLY WHEN USING THIS
-        //    level.nextLevel(); //uncomment this if you want to go through levels when pressing B
+            level.nextLevel(); //uncomment this if you want to go through levels when pressing B
             
         }
         if (evt.getKeyCode()==KeyEvent.VK_R){
@@ -326,6 +330,10 @@ public class Main extends javax.swing.JFrame {
                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        
+        if (evt.getKeyCode() == KeyEvent.VK_M) {
+            debugMode = !debugMode;
+           }
 
     }//GEN-LAST:event_panDrawKeyPressed
 
@@ -588,7 +596,9 @@ public class Main extends javax.swing.JFrame {
         }
     }
     
- 
+    if (debugMode) {
+    drawDebugInfo(g);
+        }
     
     //Draw the bullet hitting animations
     sparks.removeIf(Spark::isExpired);
@@ -605,6 +615,52 @@ public class Main extends javax.swing.JFrame {
     updateObjective();
 }
     
+    private void drawDebugInfo(Graphics g) {
+    Graphics2D g2d = (Graphics2D) g;
+    
+    // Draw navigation grid
+    if (level != null && level.getPathFinder() != null) {
+        int tileSize = level.getNavTileSize();
+        
+        for (int tx = 0; tx < level.navWalkable.length; tx++) {
+            for (int ty = 0; ty < level.navWalkable[0].length; ty++) {
+                Point worldPos = level.gridToWorld(tx, ty);
+                int screenX = worldPos.x - Main.worldX;
+                int screenY = worldPos.y - Main.worldY;
+                
+                if (level.isTileWalkable(tx, ty)) {
+                    g2d.setColor(new Color(0, 255, 0, 50));
+                } else {
+                    g2d.setColor(new Color(255, 0, 0, 50));
+                }
+                
+                g2d.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
+                g2d.setColor(Color.BLACK);
+                g2d.drawRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
+            }
+        }
+    }
+    
+    // Draw enemy paths
+    g2d.setColor(Color.YELLOW);
+    for (Enemy enemy : enemies) {
+        if (enemy.path != null && !enemy.path.isEmpty()) {
+            Point prev = null;
+            for (Point p : enemy.path) {
+                int screenX = p.x - Main.worldX;
+                int screenY = p.y - Main.worldY;
+                g2d.fillOval(screenX - 5, screenY - 5, 10, 10);
+                
+                if (prev != null) {
+                    int prevX = prev.x - Main.worldX;
+                    int prevY = prev.y - Main.worldY;
+                    g2d.drawLine(prevX, prevY, screenX, screenY);
+                }
+                prev = p;
+            }
+        }
+    }
+}
     public static void main(String args[]) {
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.

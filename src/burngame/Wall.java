@@ -12,31 +12,45 @@ import java.awt.Rectangle;
  * @description Code for walls, allowing them to be drawn and get the bounds
  */
 
+// In Wall.java - Store original coordinates:
+
 public class Wall {
    public int x, y, width, height;
    private final boolean hardwall;
+   private final int originalX, originalY; // Store original positions
 
     public Wall(int x, int y, int width, int height, boolean hard) {
-        this.x = x +Main.worldX;
-        this.y = y+ Main.worldY;
+        this.originalX = x; // Store original position
+        this.originalY = y;
+        this.x = x; 
+        this.y = y;
         this.width = width;
         this.height = height;
         this.hardwall = hard;
     }
 
-    // Method to get the wall's bounds
+    
    public void draw(Graphics g) {
-    g.setColor(Color.BLACK); // Wall color
-    g.fillRect(x - Main.worldX, y - Main.worldY, width, height); // Adjusted position for world movement
+    g.setColor(Color.RED);
+    g.fillRect(x - Main.worldX, y - Main.worldY, width, height);
 }
 
-// Update getBounds method for collision detection
+// get wall bounds
 public Rectangle getBounds(int x, int y) {
-    return new Rectangle(x, y, width, height); // Adjusted position for world movement
+    return new Rectangle(x, y, width, height);
 }
 
 public boolean isHardwall(){
     return hardwall;
+}
+
+// Get original position for pathfinding
+public int getOriginalX() {
+    return originalX;
+}
+
+public int getOriginalY() {
+    return originalY;
 }
 }
 

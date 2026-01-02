@@ -24,12 +24,14 @@ public class Boss extends Enemy {
     private Image body;
     private boolean cutScenePlayed = false;
     private boolean shotOnce = false;
-    public Boss(int x, int y, String type, int enemyLevel, int level1){
-       super(x,y,type,enemyLevel);
+    public Boss(int x, int y, String type, int enemyLevel, int level1, boolean stat){
+       super(x,y,type,enemyLevel, stat);
        this.bossLevel = level1;
         try { //loads the boss image for the level it is in
            switch (bossLevel) {
-               case 1 -> bossImage = (ImageIO.read(new File("src/burngame/icons/Pistol1.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+               case 1 -> {
+                   bossImage = (ImageIO.read(new File("src/burngame/icons/Pistol1.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+               }
                case 2 -> {
                    bossImage = (ImageIO.read(new File("src/burngame/icons/vladimir.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
                    body = ImageIO.read(new File("src/burngame/icons/vladimirdead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);

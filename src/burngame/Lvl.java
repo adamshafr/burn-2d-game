@@ -3,10 +3,12 @@ package burngame;
 
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -38,6 +40,13 @@ public class Lvl {
     private boolean anton1scene = false;
     private Boss currentBoss;
     private boolean inBombScene = false;
+    
+    
+    private int navTileSize = -1;
+    public boolean[][] navWalkable = null;
+    private PathFinder pathFinder = null;   
+    private int gridOriginX = 0;
+    private int gridOriginY = 0;
     public Lvl(){
     }
     
@@ -52,20 +61,22 @@ public class Lvl {
     public void reset(){
         loadLevel(level);
     }
-    private void initLevel(){
-       Main.setWorld(0, 0);
-       
-       Main.bodies.clear();
-       Main.getPlayer().resetPlayer();
-        initWalls();
-        if (level == 14 && !anton1scene){
-           playScene(7);
-        }
-        initEnemies();
-        initValues();
-        playTransition(level);
-      
+private void initLevel(){
+   Main.setWorld(0, 0);
+   
+   Main.bodies.clear();
+   Main.getPlayer().resetPlayer();
+    initWalls();
+    if (level == 14 && !anton1scene){
+       playScene(7);
     }
+    initEnemies();
+    initValues();
+    playTransition(level);
+    
+    // Build navigation grid after walls are loaded
+    buildNavGrid();
+}
     private void initWalls(){ //clears and builds the new levels walls
         Main.walls.clear();
         buildWalls();
@@ -87,7 +98,7 @@ public class Lvl {
                 x = 350;
                 y = 1600;
                 background = "1a";
-                currentBoss = new Boss(670,1101,"Pistol",1, level);
+                currentBoss = new Boss(670,1101,"Pistol",1, level, true);
               Main.enemies.add(currentBoss);
             }
             case 2 -> {
@@ -95,7 +106,7 @@ public class Lvl {
                 x = 1250;
                 y = -350;
                 background = "1b";
-                currentBoss =new Boss(60,419,"Pistol",1, level);
+                currentBoss =new Boss(60,419,"Pistol",1, level, false);
                 Main.enemies.add(currentBoss);
             }
             case 3 -> {
@@ -103,7 +114,7 @@ public class Lvl {
                 x = 55;
                 y = 1500;
                 background = "2";
-                currentBoss = new Boss(118,219,"Rifle",2, level);
+                currentBoss = new Boss(118,219,"Rifle",2, level, false);
                 Main.enemies.add(currentBoss);
             }
             case 4 -> {
@@ -117,7 +128,7 @@ public class Lvl {
                 x = -120;
                 y = -130;
                 background = "3b";
-                currentBoss = new Boss(200,374,"Pistol",3, level);
+                currentBoss = new Boss(200,374,"Pistol",3, level, false);
                 Main.enemies.add(currentBoss);
             }
             case 6 -> {
@@ -155,7 +166,7 @@ public class Lvl {
                 x = -275;
                 y = 230;
                 background = "5c";
-                currentBoss = new Boss(1170,80,"Knife",-1, level);
+                currentBoss = new Boss(1170,80,"Knife",-1, level, false);
                 Main.enemies.add(currentBoss);
             }
             case 12 -> {
@@ -169,7 +180,7 @@ public class Lvl {
                 x = 1050;
                 y = 550;
                 background = "6c";
-                currentBoss = new Boss(258,180,"Pistol",6, level);
+                currentBoss = new Boss(258,180,"Pistol",6, level, false);
                 Main.enemies.add(currentBoss);
             }
             case 14 -> {
@@ -189,7 +200,7 @@ public class Lvl {
                 x = -900;
                 y = -350;
                 background = "7c";
-                currentBoss = new Boss(1150,188,"Pistol",7, level);
+                currentBoss = new Boss(1150,188,"Pistol",7, level, false);
                 Main.enemies.add(currentBoss);
             }
             default -> {
@@ -651,7 +662,7 @@ public class Lvl {
              //This is important to adjust enemy levels, since technically there are only 7 levels, some of which having more stages. 
              //Because of this, even if they may be different levels the enemy level should be the same for all stages of the same level
          }
-         Main.enemies.add(new Enemy(x,y,weapon, enemyLevel));
+         Main.enemies.add(new Enemy(x,y,weapon, enemyLevel, false));
      }
      public Rectangle getTransition(){ //returns the right transition rectangle for each level
         switch (level) {
@@ -962,6 +973,231 @@ public class Lvl {
     public int getCurrentLevel(){ //getter for level
         return level;
     }
-    }
+    
    
 
+    //PATHFINDING
+
+public void buildNavGrid() {
+    ArrayList<Wall> walls = Main.walls;
+    
+    if (walls == null || walls.isEmpty()) {
+        // Default grid if no walls
+        navTileSize = 32;
+        navWalkable = new boolean[64][48]; // 2048x1536 world
+        for (int tx = 0; tx < 64; tx++) {
+            for (int ty = 0; ty < 48; ty++) {
+                navWalkable[tx][ty] = true;
+            }
+        }
+        pathFinder = new PathFinder(this, navTileSize);
+        return;
+    }
+
+    // Determine world bounds from ALL walls (including softwalls for navigation)
+    int minX = Integer.MAX_VALUE;
+    int minY = Integer.MAX_VALUE;
+    int maxX = Integer.MIN_VALUE;
+    int maxY = Integer.MIN_VALUE;
+    
+    for (Wall w : walls) {
+        if (w == null) continue;
+        // Use actual wall coordinates (they're stored with world offsets removed)
+        minX = Math.min(minX, w.x);
+        minY = Math.min(minY, w.y);
+        maxX = Math.max(maxX, w.x + w.width);
+        maxY = Math.max(maxY, w.y + w.height);
+    }
+    
+    // Add padding around the map
+    int padding = 100;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+    
+    // Ensure positive coordinates
+    if (minX < 0) minX = 0;
+    if (minY < 0) minY = 0;
+    
+    // Use a reasonable tile size - 32 works well for your game scale
+    navTileSize = 32;
+    
+    // Calculate grid dimensions
+    int cols = (int) Math.ceil((double)(maxX - minX) / navTileSize);
+    int rows = (int) Math.ceil((double)(maxY - minY) / navTileSize);
+    
+    // Create walkable grid
+    navWalkable = new boolean[cols][rows];
+    
+    // Initialize all tiles as walkable
+    for (int tx = 0; tx < cols; tx++) {
+        for (int ty = 0; ty < rows; ty++) {
+            navWalkable[tx][ty] = true;
+        }
+    }
+    
+    // Mark tiles that are too close to walls as unwalkable (using AABB for enemies)
+    for (int tx = 0; tx < cols; tx++) {
+        for (int ty = 0; ty < rows; ty++) {
+            double cx = minX + tx * navTileSize + navTileSize/2.0;
+            double cy = minY + ty * navTileSize + navTileSize/2.0;
+            
+            // A tile is walkable if an enemy's AABB (100x33) centered here doesn't collide with walls
+            boolean walk = true;
+            if (walls != null) {
+                // Enemy AABB dimensions (axis-aligned)
+                int halfWidth = 50;   // 100/2
+                int halfHeight = 17;  // 33/2
+                int buffer = 5;       // Small safety margin
+                
+                for (Wall w : walls) {
+                    if (w == null) continue;
+                    
+                    // Check if enemy's AABB would intersect wall
+                    if (cx + halfWidth + buffer >= w.x && 
+                        cx - halfWidth - buffer <= w.x + w.width &&
+                        cy + halfHeight + buffer >= w.y && 
+                        cy - halfHeight - buffer <= w.y + w.height) {
+                        walk = false;
+                        break;
+                    }
+                }
+            }
+            navWalkable[tx][ty] = walk;
+        }
+    }
+    
+    // Create PathFinder
+    pathFinder = new PathFinder(this, navTileSize);
+    
+    // Store the grid origin for coordinate conversion
+    this.gridOriginX = minX;
+    this.gridOriginY = minY;
+}
+
+
+/**
+ * PathFinder
+     * @return 
+ */
+public PathFinder getPathFinder() {
+    if (pathFinder == null) buildNavGrid();
+    return pathFinder;
+}
+
+/**
+ * Return the nav tile size chosen.
+     * @return 
+ */
+public int getNavTileSize() {
+    if (navTileSize <= 0) buildNavGrid();
+    return navTileSize;
+}
+
+/**
+ * Helpers used by PathFinder / smoothing:
+     * @param tx
+     * @param ty
+     * @return 
+ */
+public boolean isInBoundsTile(int tx, int ty) {
+    if (navWalkable == null) buildNavGrid();
+    return tx >= 0 && ty >= 0 && tx < navWalkable.length && ty < navWalkable[0].length;
+}
+
+
+public Point worldToGrid(double worldX, double worldY) {
+    if (navTileSize <= 0) return new Point(0, 0);
+    int tx = (int)((worldX - gridOriginX) / navTileSize);
+    int ty = (int)((worldY - gridOriginY) / navTileSize);
+    return new Point(tx, ty);
+}
+
+public Point gridToWorld(int tx, int ty) {
+    if (navTileSize <= 0) return new Point(0, 0);
+    int wx = tx * navTileSize + navTileSize / 2 + gridOriginX;
+    int wy = ty * navTileSize + navTileSize / 2 + gridOriginY;
+    return new Point(wx, wy);
+}
+
+// Fix the isTileWalkable method:
+public boolean isTileWalkable(int tx, int ty) {
+    if (navWalkable == null) return false;
+    return tx >= 0 && ty >= 0 && tx < navWalkable.length && ty < navWalkable[0].length && navWalkable[tx][ty];
+}
+
+/**
+ * Check line of sight using your existing LOS logic.We keep your existing LOS semantics (hardwalls block sight; softwalls do not).I invoke your existing method if present (please keep/adjust the call name if different).
+     * @param x1
+     * @param y1
+     * @param x2
+     * @param y2
+     * @return 
+ */
+public boolean lineOfSightWorldPoints(int x1, int y1, int x2, int y2) {
+    ArrayList<Wall> walls = Main.walls;
+    // If you already have a function for LOS (raycast) keep using it here:
+    // e.g. return this.isLineOfSightClear(x1, y1, x2, y2);
+    // If you don't have that exact method name, replace with your existing LOS call.
+    // The fallback below performs a conservative hardwall-only check by iterating along the line.
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    double dist = Math.hypot(dx, dy);
+    int steps = Math.max(8, (int)(dist / (getNavTileSize() / 4.0)));
+    for (int i = 0; i <= steps; i++) {
+        double t = (double)i / steps;
+        int sx = (int)Math.round(x1 + t * dx);
+        int sy = (int)Math.round(y1 + t * dy);
+        // test if any hardwall covers this point
+        if (walls != null) {
+            for (Wall w : walls) {
+                if (w == null) continue;
+                if (!w.isHardwall()) continue; // softwalls don't block LOS
+                if (sx >= w.x && sx <= w.x + w.width && sy >= w.y && sy <= w.y + w.height) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * Alert enemies to a loud sound (gunshot).Call from Weapon.fire() when weapon.isLoud() is true.
+     * @param worldX
+     * @param worldY
+ */
+public void alertEnemies(int worldX, int worldY) {
+    ArrayList<Enemy> enemies = Main.enemies;
+    if (enemies == null) return;
+    for (Enemy e : enemies) {
+        if (e == null) continue;
+        e.hearGunshot(worldX, worldY);
+    }
+}
+
+
+public boolean isTileWalkableWithEnemyCheck(int tx, int ty, Enemy checkingEnemy) {
+    if (!isTileWalkable(tx, ty)) return false;
+    
+    // Check if any other enemy is on or near this tile
+    if (Main.enemies != null && checkingEnemy != null) {
+        Point tileWorldPos = gridToWorld(tx, ty);
+        
+        for (Enemy e : Main.enemies) {
+            if (e == checkingEnemy || e == null || e.getHealth() <= 0) continue;
+            
+            // Get enemy's grid position
+            Point enemyGrid = worldToGrid(e.get("x"), e.get("y"));
+            
+            // If enemy is on this tile or adjacent (1 tile away), it's not walkable
+            if (Math.abs(enemyGrid.x - tx) <= 1 && Math.abs(enemyGrid.y - ty) <= 1) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+}
