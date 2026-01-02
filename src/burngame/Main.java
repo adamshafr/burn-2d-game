@@ -71,6 +71,7 @@ public class Main extends javax.swing.JFrame {
     private boolean showWalls = false; // Toggle visibility of walls for testing
     private boolean editMode = false; //Toggle edit mode for world building
     private boolean softwall = false; // toggle making softwalls or not
+    private boolean debug = false; //toggle to be able to press "m" to enter debug mode
     //Wall building variables
     private int k = 0;
     private int xs[] = new int[2];
@@ -305,7 +306,7 @@ public class Main extends javax.swing.JFrame {
                 }
             }
           }
-        if (evt.getKeyCode()==KeyEvent.VK_B){
+        if (evt.getKeyCode()==KeyEvent.VK_B && debug){
         //	for testing purposes THIS ALSO CAUSES LEVELS TO BUG ONLY USE IT FOR BUILDING AND TESTING, THERE ARE NO FOUND BUGS DURING REGULAR GAMEPLAY ONLY WHEN USING THIS
             level.nextLevel(); //uncomment this if you want to go through levels when pressing B
             
@@ -331,7 +332,7 @@ public class Main extends javax.swing.JFrame {
             }
         }
         
-        if (evt.getKeyCode() == KeyEvent.VK_M) {
+        if (evt.getKeyCode() == KeyEvent.VK_M && debug) {
             debugMode = !debugMode;
            }
 
