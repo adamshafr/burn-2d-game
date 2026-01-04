@@ -20,7 +20,7 @@ Players progress through a linear sequence of levels, encountering enemies, boss
      ```
 4. Choose your difficulty and click the play button
 5. Look at the current objective in the bottom right corner to figure out what to do
-   **"Burn Legacy" is the version of the game made for the school project in the span of a month month. "Burn" is the latest copy of the game.**
+   **"Burn Legacy" is the version of the game made for the school project in the span of a month. "Burn" is the latest copy of the game.**
 
 > The asset folders must remain in the same directory as `Burn.jar`.
 
