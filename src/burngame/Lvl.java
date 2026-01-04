@@ -80,6 +80,7 @@ private void initLevel(){
     private void initWalls(){ //clears and builds the new levels walls
         Main.walls.clear();
         buildWalls();
+
     }
     private void initEnemies(){ //clears and builds the new levels enemies
         Main.enemies.clear();
@@ -389,23 +390,19 @@ private void initLevel(){
                 addWall(1806,583,84,84,false);
             }
             case 10 ->{
-                addWall(-2,862,1338,39,true);
-                addWall(1290,2,46,899,true);
-                addWall(-94,-8,93,867,true);
-                addWall(-94,-8,184,592,true);
-                addWall(1,0,1288,28,true);
-                addWall(1203,28,86,539,true);
-                addWall(1200,28,88,539,true);
-                addWall(1046,132,29,435,true);
-                addWall(831,132,215,30,true);
-                addWall(831,162,28,66,true);
-                addWall(432,203,427,25,true);
-                addWall(432,134,27,69,true);
-                addWall(215,134,244,28,true);
-                addWall(215,162,30,423,true);
-                addWall(-2,584,22,276,true);
-                addWall(20,839,1270,21,true);
-                addWall(1269,567,21,272,true);
+                addWall(-1,0,88,585,true);
+                addWall(87,0,1203,29,true);
+                addWall(1201,29,89,539,true);
+                addWall(1266,566,23,295,true);
+                addWall(0,836,1266,25,true);
+                addWall(0,582,21,254,true);
+                addWall(216,134,30,450,true);
+                addWall(246,134,213,29,true);
+                addWall(431,163,28,63,true);
+                addWall(431,201,428,25,true);
+                addWall(829,134,30,67,true);
+                addWall(829,134,245,30,true);
+                addWall(1047,164,27,402,true);
             }
             case 11 ->{
                 addWall(0,850,1432,50,true);
@@ -647,7 +644,8 @@ private void initLevel(){
          }
      }
       private void addWall(int x, int y, int width, int height, boolean bool){
-         Main.walls.add(new Wall(x,y,width,height,bool));
+          if (bool == true) Main.walls.add(new Wall(x,y,width,height,0));
+          if (bool == false) Main.walls.add(new Wall(x,y,width,height,1));
      }//Methods to add a wall or enemy to the arrays in main
      private void addEnemy(int x, int y, String weapon){
          int enemyLevel = 1;
@@ -1001,7 +999,7 @@ public void buildNavGrid() {
     int maxY = Integer.MIN_VALUE;
     
     for (Wall w : walls) {
-        if (w == null) continue;
+        if (w == null || w.isStair()) continue;
         // Use actual wall coordinates (they're stored with world offsets removed)
         minX = Math.min(minX, w.x);
         minY = Math.min(minY, w.y);
@@ -1052,7 +1050,7 @@ public void buildNavGrid() {
                 int buffer = 5;       // Small safety margin
                 
                 for (Wall w : walls) {
-                    if (w == null) continue;
+                    if (w == null || w.isStair()) continue;
                     
                     // Check if enemy's AABB would intersect wall
                     if (cx + halfWidth + buffer >= w.x && 
@@ -1183,7 +1181,6 @@ public boolean isTileWalkableWithEnemyCheck(int tx, int ty, Enemy checkingEnemy)
     
     // Check if any other enemy is on or near this tile
     if (Main.enemies != null && checkingEnemy != null) {
-        Point tileWorldPos = gridToWorld(tx, ty);
         
         for (Enemy e : Main.enemies) {
             if (e == checkingEnemy || e == null || e.getHealth() <= 0) continue;

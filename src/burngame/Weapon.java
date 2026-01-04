@@ -128,7 +128,12 @@ public void shoot(int x, int y, int startX, int startY, boolean enemy) throws Un
 //that is where it will draw the spark (or damage enemy/player if it hits one of them first)
     if (!canShoot(enemy)) return; //does not shoot if cannot shoot
     if (name.equals("Rifle")) clip--; //lowers clip if rifle
-    Main.playSound(name); //plays sound
+    if (name.equals("Pistol") && !enemy) {
+        Main.playSound("pistolSuppressed");
+    }
+    else{
+        Main.playSound(name);
+    } //plays sound
      if (isLoud(enemy) && Main.level != null) {
         int worldShotX = startX + Main.worldX;
         int worldShotY = startY + Main.worldY;

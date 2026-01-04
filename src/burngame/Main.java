@@ -71,7 +71,7 @@ public class Main extends javax.swing.JFrame {
     private boolean showWalls = false; // Toggle visibility of walls for testing
     private boolean editMode = false; //Toggle edit mode for world building
     private boolean softwall = false; // toggle making softwalls or not
-    private boolean debug = false; //toggle to be able to press "m" to enter debug mode
+    private boolean debug = false; //toggle to be able to press "m" to enter debug mode and "b" to skip levels
     //Wall building variables
     private int k = 0;
     private int xs[] = new int[2];
@@ -95,7 +95,7 @@ public class Main extends javax.swing.JFrame {
             arImg = ImageIO.read(new File("src/burngame/icons/rifle.png"));
             knifeImg = ImageIO.read(new File("src/burngame/icons/knife.png"));
             scaledAR = arImg.getScaledInstance(200, 200, Image.SCALE_DEFAULT);
-            scaledPistol = pistolImg.getScaledInstance(200, 200, Image.SCALE_DEFAULT);
+            scaledPistol = pistolImg.getScaledInstance(400, 200, Image.SCALE_DEFAULT);
             scaledKnife = knifeImg.getScaledInstance(200, 200, Image.SCALE_DEFAULT);
             weaponImg = scaledKnife;
         } catch (IOException ex) {

@@ -16,10 +16,10 @@ import java.awt.Rectangle;
 
 public class Wall {
    public int x, y, width, height;
-   private final boolean hardwall;
+   private final int hardwall;
    private final int originalX, originalY; // Store original positions
 
-    public Wall(int x, int y, int width, int height, boolean hard) {
+    public Wall(int x, int y, int width, int height, int hard) {
         this.originalX = x; // Store original position
         this.originalY = y;
         this.x = x; 
@@ -41,7 +41,11 @@ public Rectangle getBounds(int x, int y) {
 }
 
 public boolean isHardwall(){
-    return hardwall;
+    return hardwall == 0;
+}
+
+public boolean isStair(){
+    return hardwall == 2;
 }
 
 // Get original position for pathfinding

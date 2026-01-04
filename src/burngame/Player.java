@@ -142,11 +142,25 @@ public class Player {
     
     public void updatePlayerPosition(int worldX, int worldY, Set<Integer> pressedKeys, int counter){ //code for updating player based on what is being pressed
     // Set speed based on weapon
+    int speedChange = 0;
+    for (Wall wall : Main.walls){     
+        if (wall.isStair()){
+        Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
+        if (this.getRotatedHitbox().intersects(wallBounds)) {
+            speedChange = -5;
+        }else{
+            speedChange = 0;
+        }
+        }
+    }
+
     if (playable){
+            
+        
     if (currentWeapon.getName().equals("Knife")) {
-        speed = 14; //speed is higher holding a knife
+        speed = 14 + speedChange; //speed is higher holding a knife
     } else {
-        speed = 10;
+        speed = 10 + speedChange;
     }
     // Movement vector components
     double moveX = 0;
@@ -213,9 +227,12 @@ public class Player {
         */
         
         for (Wall wall : Main.walls) {
+            if (!wall.isStair()){
             Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
             pushOut(playerHitbox, wallBounds);
         }
+        }
+        
         
     }
     private void pushOut(Rectangle2D hitbox, Rectangle2D wallBounds){

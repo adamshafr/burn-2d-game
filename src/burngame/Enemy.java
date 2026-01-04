@@ -791,10 +791,12 @@ private void avoidOtherEnemies() {
             
             // Check walls
             for (Wall wall : Main.walls) {
+                if (!wall.isStair()){
                 Rectangle2D wallBounds = wall.getBounds(wall.x - Main.worldX, wall.y - Main.worldY);
                 if (testHitbox.intersects(wallBounds)) {
                     collision = true;
                     break;
+                }
                 }
             }
             
