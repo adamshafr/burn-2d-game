@@ -11,15 +11,15 @@ Players progress through a linear sequence of levels, encountering enemies, boss
 ## How to Run the Game
 
 1. Download or clone the repository
-2. Make sure **Java 17 or newer** is installed
-3. Extract the ZIP and either:
+2. Make sure **JDK 25 or newer** is installed. It can be downloaded here: https://www.oracle.com/java/technologies/downloads/#java25
+4. Extract the ZIP and either:
    - Double-click **Burn.jar**, or
    - Run the following command from the project folder:
      ```bash
      java -jar Burn.jar
      ```
-4. Choose your difficulty and click the play button
-5. Look at the current objective in the bottom right corner to figure out what to do
+5. Choose your difficulty and click the play button
+6. Look at the current objective in the bottom right corner to figure out what to do
    **"Burn Legacy" is the version of the game made for the school project in the span of a month. "Burn" is the latest copy of the game.**
 
 > The asset folders must remain in the same directory as `Burn.jar`.
