@@ -1,69 +1,61 @@
 package burngame;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
-
 
 /**
  *
- * 
  * @date Jan 18, 2025
  * @filename CutscenePlayer
- * @description Code for playing cutscenes. I had the cutscenes as videos but could not find a way to play them so converted them to frame by frame images, this goes through the images at 5fps
- * and plays the video basically.
+ * @description Plays cutscenes by loading numbered frame images at 5 FPS.
+ * Frames are loaded from inside the JAR using classpath resources.
+ * Frame naming format: "1 (x).png"
  */
 public class CutscenePlayer implements Runnable {
+
     private BufferedImage[] frames;
     private int currentFrame = 0;
     private boolean running = false;
-    private final Runnable onCutsceneEnd; // Callback for when the cutscene ends
+    private final Runnable onCutsceneEnd;
 
-    public CutscenePlayer(String folderPath, Runnable onCutsceneEnd) {
+    /**
+     * @param sceneName folder name under /burngame/cutscenes/
+     * @param frameCount total number of frames in the cutscene
+     * @param onCutsceneEnd callback executed when cutscene finishes
+     */
+    public CutscenePlayer(String sceneName, int frameCount, Runnable onCutsceneEnd) {
         this.onCutsceneEnd = onCutsceneEnd;
-        loadFrames(folderPath);
+        loadFrames(sceneName, frameCount);
     }
 
-    private void loadFrames(String folderpath) {
+    private void loadFrames(String sceneName, int frameCount) {
+        frames = new BufferedImage[frameCount];
+
         try {
-            File folder = new File("cutscenes/"+folderpath);
-            File[] files = folder.listFiles((dir, name) -> name.endsWith(".png"));
+            for (int i = 0; i < frameCount; i++) {
+                String path = String.format(
+                    "/burngame/cutscenes/%s/1 (%d).png",
+                    sceneName,
+                    i + 1
+                );
 
-            if (files == null || files.length == 0) {
-                throw new RuntimeException("No PNG files found in folder: " + folderpath);
+                InputStream is = getClass().getResourceAsStream(path);
+                if (is == null) {
+                    throw new RuntimeException("Missing cutscene frame: " + path);
+                }
+
+                frames[i] = ImageIO.read(is);
             }
-
-            // Sort files by frame number (assumes filenames like "1 (1).png", "1 (2).png", etc.)
-            java.util.Arrays.sort(files, (f1, f2) -> {
-                int n1 = extractFrameNumber(f1.getName());
-                int n2 = extractFrameNumber(f2.getName());
-                return Integer.compare(n1, n2);
-            });
-
-            frames = new BufferedImage[files.length];
-            for (int i = 0; i < files.length; i++) {
-                frames[i] = ImageIO.read(files[i]);
-            }
-        } catch (IOException | RuntimeException e) {
-            throw new RuntimeException("Failed to load frames: " + e.getMessage());
-        }
-    }
-
-    private int extractFrameNumber(String filename) {
-        try {
-            int start = filename.indexOf("(") + 1;
-            int end = filename.indexOf(")");
-            return Integer.parseInt(filename.substring(start, end));
-        } catch (NumberFormatException e) {
-            return 0; // Default to 0 if parsing fails
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load cutscene frames", e);
         }
     }
 
     public void start() {
         running = true;
-        Thread thread = new Thread(this);
-        thread.start();
+        new Thread(this, "CutscenePlayer").start();
     }
 
     public void stop() {
@@ -74,37 +66,31 @@ public class CutscenePlayer implements Runnable {
         if (frames != null && currentFrame < frames.length) {
             return frames[currentFrame];
         }
-        return null; // No frame to display
+        return null;
     }
 
-   @Override
-public void run() {
-    long startTime = System.currentTimeMillis(); // Record the start time
-    int frameDelay = 200; // Delay in milliseconds (5 FPS = 1000ms / 5 = 200ms)
+    @Override
+    public void run() {
+        long startTime = System.currentTimeMillis();
+        int frameDelay = 200; // 5 FPS
 
-    while (running) {
-        // Calculate the expected current frame based on elapsed time
-        long elapsedTime = System.currentTimeMillis() - startTime;
-        int expectedFrame = (int) (elapsedTime / frameDelay);
+        while (running) {
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            int expectedFrame = (int) (elapsedTime / frameDelay);
 
-        if (expectedFrame >= frames.length) {
-            running = false; // Stop the loop when the cutscene finishes
-            if (onCutsceneEnd != null) {
-                onCutsceneEnd.run(); // Trigger callback
+            if (expectedFrame >= frames.length) {
+                running = false;
+                if (onCutsceneEnd != null) {
+                    onCutsceneEnd.run();
+                }
+                return;
             }
-            return;
-        }
 
-        // Only update the current frame if it has changed
-        if (expectedFrame != currentFrame) {
             currentFrame = expectedFrame;
-        }
 
-        try {
-            // Sleep for a short time to reduce CPU usage
-            Thread.sleep(10); // Sleep briefly to avoid tight looping
-        } catch (InterruptedException e) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ignored) {}
         }
     }
-}
 }

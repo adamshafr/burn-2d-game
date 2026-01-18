@@ -30,29 +30,29 @@ public class Boss extends Enemy {
         try { //loads the boss image for the level it is in
            switch (bossLevel) {
                case 1 -> {
-                   bossImage = (ImageIO.read(new File("src/burngame/icons/Pistol1.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+                   bossImage = Main.loadImage("/burngame/icons/Pistol1.png").getScaledInstance(169, 169, Image.SCALE_DEFAULT);
                }
                case 2 -> {
-                   bossImage = (ImageIO.read(new File("src/burngame/icons/vladimir.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
-                   body = ImageIO.read(new File("src/burngame/icons/vladimirdead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+                   bossImage = Main.loadImage("/burngame/icons/vladimir.png").getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+                   body = Main.loadImage("/burngame/icons/vladimirdead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
                }
                case 3 -> {
-                   bossImage = (ImageIO.read(new File("src/burngame/icons/treyvon.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
-                   body = ImageIO.read(new File("src/burngame/icons/treyvondead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+                   bossImage = Main.loadImage("/burngame/icons/treyvon.png").getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+                   body = Main.loadImage("/burngame/icons/treyvondead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
                }
                case 5, 13 -> {
-                   bossImage = (ImageIO.read(new File("src/burngame/icons/ronan.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
-                   body = ImageIO.read(new File("src/burngame/icons/ronandead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+                   bossImage = Main.loadImage("/burngame/icons/ronan.png").getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+                   body = Main.loadImage("/burngame/icons/ronandead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
                }
                case 11 -> {
-                   super.strip = (ImageIO.read(new File("src/burngame/icons/dimitri.png")));
-                   body = ImageIO.read(new File("src/burngame/icons/dimitridead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+                   super.strip = Main.loadImage("/burngame/icons/dimitri.png");
+                   body = Main.loadImage("/burngame/icons/dimitridead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
                    health = 200;
                   
                }
                case 16 -> {
-                   bossImage = (ImageIO.read(new File("src/burngame/icons/anton.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
-                   body = ImageIO.read(new File("src/burngame/icons/antondead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+                   bossImage = Main.loadImage("/burngame/icons/anton.png").getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+                   body = Main.loadImage("/burngame/icons/antondead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
                }
                default -> {
                }
@@ -167,7 +167,7 @@ public class Boss extends Enemy {
      public void aniframe(BufferedImage strip, String type) { //overrides aniframe to animate using dimitris image instead of the enemy image (dimitri is the only boss that moves)
         if (!type.equals("Knife")) return;
         try {
-            strip = ImageIO.read(new File("src/burngame/icons/dimitri.png"));
+            strip = Main.loadImage("/burngame/icons/dimitri.png");
         } catch (IOException ex) {
         }
         Image frame = strip.getSubimage(0, iter, 40, 40);
@@ -177,7 +177,7 @@ public class Boss extends Enemy {
      
     public void changeSkinToAnton(){ //method to change skin to anton mid cutscene
         try {
-                bossImage = (ImageIO.read(new File("src/burngame/icons/antonidle.png"))).getScaledInstance(169, 169, Image.SCALE_DEFAULT);
+                bossImage = Main.loadImage("/burngame/icons/antonidle.png").getScaledInstance(169, 169, Image.SCALE_DEFAULT);
             } catch (IOException ex) {
                 System.out.println("error");
             }

@@ -46,7 +46,7 @@ public class Player {
     private void aniframe(BufferedImage strip) {
         try {
             // Load the player's image
-            strip = ImageIO.read(new File("src/burngame/icons/carter" + weaponIndex + ".png"));
+            strip = Main.loadImage("/burngame/icons/carter" + weaponIndex + ".png");
         } catch (IOException ex) {
             System.out.println("Image Failed to Load");
         }
@@ -59,9 +59,9 @@ public class Player {
         
         try {
             // Load the player's image
-            strip = ImageIO.read(new File("src/burngame/icons/carter" + weaponIndex + ".png"));
-            imgblood = ImageIO.read(new File("src/burngame/icons/blood.png"));
-            bodyImage = ImageIO.read(new File("src/burngame/icons/carterdead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+            strip =  Main.loadImage("/burngame/icons/carter" + weaponIndex + ".png");
+            imgblood = Main.loadImage("/burngame/icons/blood.png");
+            bodyImage = Main.loadImage("/burngame/icons/carterdead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
             aniframe(strip);
         } catch (IOException ex) {
             System.out.println("Image Failed to Load");
@@ -321,11 +321,7 @@ public class Player {
     
     public void die(){ //death logic, fails level, plays the annoying sound, sets player to dead and makes them unable to do anything, aswell as adds a player body.
         Main.failLevel();
-        try {
-            Main.playSound("fail");
-        } catch (UnsupportedAudioFileException ex) {
-            Logger.getLogger(Player.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Main.playSound("fail");
         playable = false;
         dead = true;
         Main.bodies.add(new Body(960+Main.worldX,540+Main.worldY,angle,bodyImage));

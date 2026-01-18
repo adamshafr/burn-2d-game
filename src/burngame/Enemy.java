@@ -50,9 +50,21 @@ public class Enemy {
     private boolean stat;
     
     
-    private enum AIState { IDLE, ALERTED, CHASING, SHOOTING }
-
+    // ====== AI STATE SYSTEM ======
+private enum AIState { IDLE, ALERTED, CHASING, SHOOTING}
 private AIState aiState = AIState.IDLE;
+
+// Spawn position (home)
+private final int spawnX;
+private final int spawnY;
+
+// Returning-to-home behavior
+private boolean returningHome = false;
+private long arrivedAtLastKnownTime = -1;
+
+// Timings (tweak if needed)
+private static final long SEARCH_TIME_MS = 3000; // wait 3s at last known pos
+private static final int REPLAN_DELAY = 15;
 
 public List<Point> path = null;
 private int pathIndex = 0;
@@ -62,7 +74,6 @@ private Point lastKnownPlayerPos = null;
 
 private boolean isGunEnemy;
 private final int HEARING_RADIUS = 2000;
-private final int REPLAN_DELAY = 15;
 
 private final int GUN_MIN_DIST = 140;
 private final int GUN_MAX_DIST = 420;
@@ -74,6 +85,8 @@ public int extraDiff = 0;
     public Enemy(int x, int y, String type, int lvl, boolean stat) {
         this.x = x;
         this.y = y;
+        this.spawnX = x;
+        this.spawnY = y;
         this.health = 30; // Default health
         this.weapon = new Weapon(type, true);
         this.level = lvl;
@@ -84,13 +97,13 @@ public int extraDiff = 0;
         try {
          if (level == -1){ //I was paniking and dimitri was not working so I randomly thought of this weird way to solve it, it works so yeah. -1 is only passed if it is dimitri.
              level = 5;
-             strip = ImageIO.read(new File("src/burngame/icons/dimitri.png"));
-             enemyImage = ImageIO.read(new File("src/burngame/icons/dimitri.png"));
-             bodyImage = ImageIO.read(new File("src/burngame/icons/dimitridead.png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT); //sets the images properly if it is Dimitri, who is the only knife boss.
+             strip = Main.loadImage("/burngame/icons/dimitri.png");
+             enemyImage = strip;
+             bodyImage = Main.loadImage("/burngame/icons/dimitridead.png").getScaledInstance(145, 169, Image.SCALE_DEFAULT); //sets the images properly if it is Dimitri, who is the only knife boss.
          }else{
-             strip = ImageIO.read(new File("src/burngame/icons/"+type+getImageLevel()+".png")); //filenames are formatted to work with this
-            imgblood = ImageIO.read(new File("src/burngame/icons/blood.png"));
-            bodyImage = ImageIO.read(new File("src/burngame/icons/dead"+getImageLevel()+".png")).getScaledInstance(145, 169, Image.SCALE_DEFAULT);
+             strip = Main.loadImage("/burngame/icons/"+type+getImageLevel()+".png"); //filenames are formatted to work with this
+            imgblood = Main.loadImage("/burngame/icons/blood.png");
+            bodyImage = Main.loadImage("/burngame/icons/dead"+getImageLevel()+".png").getScaledInstance(145, 169, Image.SCALE_DEFAULT);
          }
         } catch (IOException ex) {
             System.out.println("Failed to load enemy image.");
@@ -220,7 +233,7 @@ public int extraDiff = 0;
             g2d.drawImage(imgblood,screenX-(imgblood.getWidth(null)/2),screenY-(imgblood.getHeight(null)/2),null);
         }
         updateSpeed();
-        resolveCollisions();
+   //     resolveCollisions();
     }
     
    
@@ -552,7 +565,7 @@ public void hearGunshot(int gx, int gy) {
 
 public void updateAI() {
     if (!Main.getPlayer().playable || Main.level.cutsceneHappened || stat) return;
-
+    
     // Calculate distance to player
     double dxToPlayer = (960 + Main.worldX) - x;
     double dyToPlayer = (540 + Main.worldY) - y;
@@ -563,8 +576,19 @@ public void updateAI() {
         System.out.println("Enemy AI - State: " + aiState + 
                          " CanSee: " + canSee + 
                          " Distance: " + (int)distance +
-                         " Path: " + (path != null ? path.size() : 0));
+                         " Path: " + (path != null ? path.size() : 0) +
+                         " ReturningHome: " + returningHome);
     }
+
+    /* ===================== RETURN HOME OVERRIDES ===================== */
+
+    // If we see player or hear something, cancel return-home immediately
+    if (canSee) {
+        returningHome = false;
+        arrivedAtLastKnownTime = -1;
+    }
+
+    /* ===================== NORMAL STATE UPDATES ===================== */
 
     // Update AI state based on sight
     if (canSee) {
@@ -573,40 +597,72 @@ public void updateAI() {
         if (isGunEnemy) {
             aiState = AIState.CHASING;
         } else {
-            // KNIFE ENEMY: When we see player, just walk straight toward them
-            aiState = AIState.SHOOTING; // Use SHOOTING state for direct movement
+            aiState = AIState.SHOOTING;
         }
         replanCooldown = 0;
-    } else if (lastKnownPlayerPos != null) {
-        // Can't see player but have a last known position
+    } 
+    else if (lastKnownPlayerPos != null && !returningHome) {
         aiState = AIState.ALERTED;
         
-        // Check if we've reached the last known position
         double distToLastKnown = Math.sqrt(
             Math.pow(lastKnownPlayerPos.x - x, 2) + 
             Math.pow(lastKnownPlayerPos.y - y, 2)
         );
         
         if (distToLastKnown < 50) {
-            // We've reached the last known position and player isn't here
-            // Look around briefly, then give up
-            if (replanCooldown > 60) {
+            if (arrivedAtLastKnownTime == -1) {
+                arrivedAtLastKnownTime = System.currentTimeMillis();
+            }
+
+            // Wait at last known position, then go home
+            if (System.currentTimeMillis() - arrivedAtLastKnownTime > SEARCH_TIME_MS) {
+                returningHome = true;
                 lastKnownPlayerPos = null;
-                aiState = AIState.IDLE;
                 path = null;
+                replanCooldown = 0;
             }
         }
-    } else {
+    } 
+    else if (!returningHome) {
         aiState = AIState.IDLE;
     }
 
     // Decrease replan cooldown
     if (replanCooldown > 0) replanCooldown--;
 
-    // Handle pathfinding for ALERTED state (when we heard something but can't see)
+    /* ===================== RETURNING HOME MODE ===================== */
+
+    if (returningHome) {
+        double distToHome = Math.sqrt(
+            Math.pow(spawnX - x, 2) + 
+            Math.pow(spawnY - y, 2)
+        );
+
+        // Reached home
+        if (distToHome < 40) {
+            returningHome = false;
+            aiState = AIState.IDLE;
+            path = null;
+            return;
+        }
+
+        // Pathfind home
+        if (path == null && replanCooldown == 0) {
+            path = Main.level.getPathFinder().findPath(x, y, spawnX, spawnY, this);
+            pathIndex = 0;
+            replanCooldown = REPLAN_DELAY;
+        }
+
+        followPath();
+
+        // IMPORTANT: skip avoidance while returning home
+        resolveCollisions();
+        return;
+    }
+
+    /* ===================== NORMAL PATHFINDING ===================== */
+
     if (aiState == AIState.ALERTED && lastKnownPlayerPos != null && replanCooldown == 0) {
-        
-        // Check if we need a new path
         boolean needNewPath = (path == null || path.isEmpty());
         if (!needNewPath && pathIndex < path.size()) {
             Point currentTarget = path.get(pathIndex);
@@ -621,19 +677,14 @@ public void updateAI() {
             path = Main.level.getPathFinder().findPath(x, y, lastKnownPlayerPos.x, lastKnownPlayerPos.y, this);
             pathIndex = 0;
             replanCooldown = REPLAN_DELAY;
-            
-            if (Main.debugMode && path != null) {
-                System.out.println("New path found with " + path.size() + " points");
-            }
         }
     }
 
-    // Handle movement based on state and enemy type
+    /* ===================== MOVEMENT LOGIC (UNCHANGED) ===================== */
+
     if (isGunEnemy) {
-        // GUN ENEMY LOGIC (same as before)
         if (canSee) {
             if (distance < GUN_MIN_DIST) {
-                // Too close - move away
                 aiState = AIState.CHASING;
                 double angleToPlayer = Math.atan2(dyToPlayer, dxToPlayer);
                 lastKnownPlayerPos = new Point(
@@ -641,32 +692,28 @@ public void updateAI() {
                     (int)(y - Math.sin(angleToPlayer) * GUN_MIN_DIST * 1.5)
                 );
                 replanCooldown = 0;
-            } else if (distance > GUN_MAX_DIST) {
-                // Too far - move closer
+            } 
+            else if (distance > GUN_MAX_DIST) {
                 aiState = AIState.CHASING;
                 lastKnownPlayerPos = new Point(960 + Main.worldX, 540 + Main.worldY);
                 replanCooldown = 0;
-            } else {
-                // Perfect distance - shoot!
+            } 
+            else {
                 aiState = AIState.SHOOTING;
                 path = null;
             }
         }
         
-        // Gun enemies use pathfinding for chasing
         if ((aiState == AIState.CHASING || aiState == AIState.ALERTED) && lastKnownPlayerPos != null) {
             followPath();
         }
-    } else {
-        // KNIFE ENEMY SIMPLE LOGIC
+    } 
+    else {
         if (canSee) {
-            // SIMPLE: Just walk straight toward player when we can see them
-            if (distance > 50) { // Get very close (50 units)
-                // Move directly toward player
+            if (distance > 50) {
                 double moveX = (dxToPlayer / distance) * speed;
                 double moveY = (dyToPlayer / distance) * speed;
                 
-                // Check for and avoid other enemies
                 for (Enemy e : Main.enemies) {
                     if (e == this || e == null || e.health <= 0) continue;
                     
@@ -674,7 +721,6 @@ public void updateAI() {
                     double dyToEnemy = e.y - y;
                     double distToEnemy = Math.sqrt(dxToEnemy*dxToEnemy + dyToEnemy*dyToEnemy);
                     
-                    // If enemy is too close, push away from them
                     if (distToEnemy < 80 && distToEnemy > 0) {
                         double pushStrength = 1.5 * (1.0 - (distToEnemy / 80.0));
                         moveX -= (dxToEnemy / distToEnemy) * pushStrength;
@@ -682,7 +728,6 @@ public void updateAI() {
                     }
                 }
                 
-                // Normalize movement after avoidance
                 double moveDist = Math.sqrt(moveX*moveX + moveY*moveY);
                 if (moveDist > 0) {
                     moveX = (moveX / moveDist) * speed;
@@ -692,21 +737,18 @@ public void updateAI() {
                 x += moveX;
                 y += moveY;
                 
-                // Animation
                 aniframe(strip, "Knife");
                 if (iter == 360) iter = 80;
                 if (Main.counter == 6) iter += 40;
             }
-            // If distance <= 50, we're close enough, just shoot (attacks will happen automatically)
-        } else if (aiState == AIState.ALERTED && lastKnownPlayerPos != null) {
-            // Can't see player, but heard something - use pathfinding
+        } 
+        else if (aiState == AIState.ALERTED && lastKnownPlayerPos != null) {
             followPath();
         }
     }
-    
-    
+
+    // Normal avoidance only when NOT returning home
     avoidOtherEnemies();
-    // Always resolve collisions
     resolveCollisions();
 }
 

@@ -708,11 +708,7 @@ private void initLevel(){
             try {   
                 Main.setLabels(false);
                 Thread.sleep(2000);
-                try {
-                    Main.playSound("explosion");
-                } catch (UnsupportedAudioFileException ex) {
-                    Logger.getLogger(Lvl.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                Main.playSound("explosion");
                 Thread.sleep(7100); //waits a very long and annoying time (basically a cutscene) before sending the player to level 9
                 level += 2;
                 inBombScene = false;
@@ -779,6 +775,22 @@ private void initLevel(){
              }
          }
      }
+    
+     
+     
+     
+     
+     
+     private static final java.util.Map<String, Integer> CUTSCENE_FRAMES = java.util.Map.of(
+    "Vladimir1", 127,
+    "Driving",   165,
+    "Treyvon1",  124,
+    "Ronan1",    300,
+    "Dimitri1",  195,
+    "Ronan2",    185,
+    "Anton1",    71,
+    "Anton2",    193
+);
      
     public void playScene(int scene){ //public method for playing cutscenes
         switch (scene){
@@ -797,107 +809,81 @@ private void initLevel(){
         cutsceneHappened = true;
     } 
      //logic for all cutscenes. 
-    private void scene1(){
-         cutscenePlayer = new CutscenePlayer("Vladimir1",this::onCutsceneEnd);
-        cutscenePlayer.start();
-        try {
-            Main.playSound("scene1");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-    }
-     
-    private void scene2(){
-    //  playTransition(0);
-      cutscenePlayer = new CutscenePlayer("Driving",this::onCutsceneEnd);
-        cutscenePlayer.start();
-        try {
-            Main.playSound("scene2");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-        instantNext = true;
-    }
     
-    private void scene3(){
-         cutscenePlayer = new CutscenePlayer("Treyvon1",this::onCutsceneEnd);
-        cutscenePlayer.start();
-         try {
-            Main.playSound("scene3");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-         
-    }
-    
-    private void scene4(){
-         cutscenePlayer = new CutscenePlayer("Ronan1",this::onCutsceneEnd);
-        cutscenePlayer.start();
-         try {
-            Main.playSound("scene4");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-         nextLevelAfterScene = true;
-    }
-    
-    private void scene5(){
-         cutscenePlayer = new CutscenePlayer("Dimitri1",this::onCutsceneEnd);
-        cutscenePlayer.start();
-        nextLevelAfterScene = true;
-         try {
-            Main.playSound("scene5");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-         new Thread(() -> {
+private void scene1() {
+    scenePlay("Vladimir1");
+    Main.playSound("scene1");
+}
+
+private void scene2() {
+    scenePlay("Driving");
+    Main.playSound("scene2");
+    instantNext = true;
+}
+
+private void scene3() {
+    scenePlay("Treyvon1");
+    Main.playSound("scene3");
+}
+
+private void scene4() {
+    scenePlay("Ronan1");
+    Main.playSound("scene4");
+    nextLevelAfterScene = true;
+}
+
+private void scene5() {
+    scenePlay("Dimitri1");
+    nextLevelAfterScene = true;
+    Main.playSound("scene5");
+
+    new Thread(() -> {
         try {
-            Thread.sleep(39000); 
+            Thread.sleep(39000);
             currentBoss.takeDamage(100);
-        } catch (InterruptedException e) {
-        }
+        } catch (InterruptedException ignored) {}
     }).start();
-         
-    }
-    
-    private void scene6(){
-        cutscenePlayer = new CutscenePlayer("Ronan2",this::onCutsceneEnd); 
-        cutscenePlayer.start();
-        nextLevelAfterScene = true;
-         try {
-            Main.playSound("scene6");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-         new Thread(() -> {
+}
+
+private void scene6() {
+    scenePlay("Ronan2");
+    nextLevelAfterScene = true;
+    Main.playSound("scene6");
+
+    new Thread(() -> {
         try {
-            Thread.sleep(21800); 
+            Thread.sleep(21800);
             currentBoss.takeDamage(100);
-        } catch (InterruptedException e) {
-        }
+        } catch (InterruptedException ignored) {}
     }).start();
-    }
-    
-    private void scene7(){
-        cutscenePlayer = new CutscenePlayer("Anton1",this::onCutsceneEnd);
-        cutscenePlayer.start();
-        anton1scene = true;
-         try {
-            Main.playSound("scene7");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-    }
-    
-    private void scene8(){
-        cutscenePlayer = new CutscenePlayer("Anton2",this::onCutsceneEnd); 
-        cutscenePlayer.start();
-         try {
-            Main.playSound("scene8");
-        } catch (UnsupportedAudioFileException ex) {
-        }
-          new Thread(() -> {
+}
+
+private void scene7() {
+    scenePlay("Anton1");
+    anton1scene = true;
+    Main.playSound("scene7");
+}
+
+private void scene8() {
+    scenePlay("Anton2");
+    Main.playSound("scene8");
+
+    new Thread(() -> {
         try {
-            Thread.sleep(5000); 
+            Thread.sleep(5000);
             currentBoss.changeSkinToAnton();
-        } catch (InterruptedException e) {
-        }
+        } catch (InterruptedException ignored) {}
     }).start();
-        
-    }
+}
+
+private void scenePlay(String name){
+      cutscenePlayer = new CutscenePlayer(
+        name,
+        CUTSCENE_FRAMES.get(name),
+        this::onCutsceneEnd
+    );
+    cutscenePlayer.start();
+}
      
     public void endCutscene(){ //we wanted to make a key to skip cutscenes but we couldnt figure out how to stop audio in time so this is here for now
         onCutsceneEnd();
@@ -939,7 +925,7 @@ private void initLevel(){
     
     private void playTransition(int i){ //plays transition screens
         try {
-            transition = (ImageIO.read(new File("transitions/"+i+".png")));
+            transition = Main.loadImage("/burngame/transitions/"+i+".png");
             Main.getPlayer().playable = false;
             Main.setLabels(false);
         } catch (IOException ex) {

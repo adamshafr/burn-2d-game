@@ -25,7 +25,7 @@ public class Weapon {
     private int fireRate; // Bullets per second
     private boolean automatic; // True for automatic weapons (AR), false for semi-automatic (Pistol)
     private Image sparkImage;
-    private String sparkPath = "src/burngame/icons/spark.png";
+    private String sparkPath = "/burngame/icons/spark.png";
     private int clip = 24;
     public boolean reloading = false;    
     private long lastShotTime = 0;
@@ -53,7 +53,7 @@ public class Weapon {
             }
         }
         try { //we were originally going to make different spark images but never got to it
-            sparkImage = ImageIO.read(new File(sparkPath));
+            sparkImage = Main.loadImage(sparkPath);
         } catch (IOException ex) {
             System.out.println("Failed");
         }

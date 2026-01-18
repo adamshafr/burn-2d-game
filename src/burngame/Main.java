@@ -11,8 +11,11 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -81,32 +84,33 @@ public class Main extends javax.swing.JFrame {
     
     public Main() {
         
-        initComponents();
-        initGameLoop();
-        rejectLevel.setVisible(false);
-        restartMsg.setVisible(false);
-        failedMsg.setVisible(false);
-        pauselbl.setVisible(false);
-        missionFailed = false;
-        level.reset(); //Starts the level, which is defaulted to 1 to start with.
-        try { //loads all basic images
-            crosshair = ImageIO.read(new File("src/burngame/icons/crosshair.png"));
-            pistolImg = ImageIO.read(new File("src/burngame/icons/pistol.png"));
-            arImg = ImageIO.read(new File("src/burngame/icons/rifle.png"));
-            knifeImg = ImageIO.read(new File("src/burngame/icons/knife.png"));
+        try {
+            initComponents();
+            initGameLoop();
+            rejectLevel.setVisible(false);
+            restartMsg.setVisible(false);
+            failedMsg.setVisible(false);
+            pauselbl.setVisible(false);
+            missionFailed = false;
+            level.reset(); //Starts the level, which is defaulted to 1 to start with.
+            //loads all basic images
+            crosshair = loadImage("/burngame/icons/crosshair.png");
+            pistolImg = loadImage("/burngame/icons/pistol.png");
+            arImg = loadImage("/burngame/icons/rifle.png");
+            knifeImg = loadImage("/burngame/icons/knife.png");
             scaledAR = arImg.getScaledInstance(200, 200, Image.SCALE_DEFAULT);
             scaledPistol = pistolImg.getScaledInstance(400, 200, Image.SCALE_DEFAULT);
             scaledKnife = knifeImg.getScaledInstance(200, 200, Image.SCALE_DEFAULT);
             weaponImg = scaledKnife;
+            
+            // Set the custom cursor to hide the default cursor
+            Toolkit toolkit = Toolkit.getDefaultToolkit();
+            Cursor blankCursor = toolkit.createCustomCursor(toolkit.getImage(""), new java.awt.Point(0, 0), "blank cursor");
+            this.setCursor(blankCursor);
+            if (editMode) this.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)); //this is for easier wall building, do not use for game
         } catch (IOException ex) {
-            System.out.println("an image Failed");
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-        // Set the custom cursor to hide the default cursor
-        Toolkit toolkit = Toolkit.getDefaultToolkit();
-        Cursor blankCursor = toolkit.createCustomCursor(toolkit.getImage(""), new java.awt.Point(0, 0), "blank cursor");
-        this.setCursor(blankCursor); 
-        if (editMode) this.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)); //this is for easier wall building, do not use for game
     }
         @SuppressWarnings("unchecked")
         
@@ -325,11 +329,7 @@ public class Main extends javax.swing.JFrame {
         }
         if (evt.getKeyCode()==KeyEvent.VK_G && level.getCurrentLevel() == 8){ //bomb planting for the one level it is used for
             level.bombPlanted = true;
-            try {
-                playSound("bomb");
-            } catch (UnsupportedAudioFileException ex) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            playSound("bomb");
         }
         
         if (evt.getKeyCode() == KeyEvent.VK_M && debug) {
@@ -414,12 +414,13 @@ public class Main extends javax.swing.JFrame {
     }
     
     public static void setBackground(double scale, String image){ //setter for background
-        try{
-        Image unscaled = ImageIO.read(new File("src/burngame/backgrounds/"+image+".png"));
-        scaled = unscaled.getScaledInstance((int)(unscaled.getWidth(null)*scale),(int)(unscaled.getHeight(null)*scale), Image.SCALE_DEFAULT);
-        }catch (IOException ex) {
-            System.out.println("failed");
+        Image unscaled = null;
+        try {
+            unscaled = loadImage("/burngame/backgrounds/"+image+".png");
+        } catch (IOException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
+        scaled = unscaled.getScaledInstance((int)(unscaled.getWidth(null)*scale),(int)(unscaled.getHeight(null)*scale), Image.SCALE_DEFAULT);
     }
     
     public static void failLevel(){ //method for failing current level, setting lables to false and true and making the restart message
@@ -496,24 +497,44 @@ public class Main extends javax.swing.JFrame {
            return player;
        }
    
-      public static void playSound(String sound) throws UnsupportedAudioFileException { //method for playing sound. this is used everywhere to play sound.
+public static void playSound(String sound) {
     try {
-        File f = new File("src/burngame/sounds/" + sound + ".wav");
-        AudioInputStream audioIn = AudioSystem.getAudioInputStream(f.toURI().toURL());
+        InputStream is = Main.class.getResourceAsStream(
+            "/burngame/sounds/" + sound + ".wav"
+        );
+
+        if (is == null) {
+            throw new RuntimeException("Sound not found: " + sound);
+        }
+
+        AudioInputStream audioIn = AudioSystem.getAudioInputStream(
+            new BufferedInputStream(is)
+        );
+
         Clip clip = AudioSystem.getClip();
         clip.open(audioIn);
         clip.start();
-        
-        // Ensure the clip is closed after it finishes playing
-        clip.addLineListener(event -> {
-            if (event.getType() == LineEvent.Type.STOP) {
-                clip.close(); // Close the clip when it stops
-            }
-        });
-    } catch (LineUnavailableException | IOException ex) {
-        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+
+    } catch (Exception e) {
+        e.printStackTrace();
     }
 }
+
+public static BufferedImage loadImage(String path) throws IOException {
+    InputStream is = Main.class.getResourceAsStream(path);
+
+    if (is == null) {
+        throw new IOException("Image not found: " + path);
+    }
+
+    BufferedImage img = ImageIO.read(is);
+    if (img == null) {
+        throw new IOException("Failed to decode image: " + path);
+    }
+
+    return img;
+}
+
     
     
     private void checkTransition(){ //checks if player can transition to next level
