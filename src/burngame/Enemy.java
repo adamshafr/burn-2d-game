@@ -73,7 +73,7 @@ private int replanCooldown = 0;
 private Point lastKnownPlayerPos = null;
 
 private boolean isGunEnemy;
-private final int HEARING_RADIUS = 2000;
+private int HEARING_RADIUS;
 
 private final int GUN_MIN_DIST = 140;
 private final int GUN_MAX_DIST = 420;
@@ -157,35 +157,42 @@ public int extraDiff = 0;
             reactionTime = 800;
             accuracy = 0.1;
             speedChange = -2;
+            HEARING_RADIUS = 1000;
             break;
             }case 2-> {
             reactionTime = 350;
             accuracy = 0.3;
             speedChange = 2;
+            HEARING_RADIUS = 700;
             break;
             }case 3->{
              reactionTime = 400;
             accuracy = 0.4;  
             speedChange = 2;
+            HEARING_RADIUS = 1000;
             break;
             }case 4->{
              reactionTime = 270;
             accuracy = 0.5; 
             speedChange = 3;
+            HEARING_RADIUS = 750;
             break;
             }case 5->{
              reactionTime = 260;
             accuracy = 0.7;
             speedChange = 4;
+            HEARING_RADIUS = 500;
             break;
             }case 6->{
              reactionTime = 250;
             accuracy = 0.8;
-            speedChange = 5; //these knife enemies are super fast
+            speedChange = 5; 
+            HEARING_RADIUS = 800;
             break;
             }case 7->{
              reactionTime = 200;
             accuracy = 0.9;
+            HEARING_RADIUS = 1200;
             break;
             }
             

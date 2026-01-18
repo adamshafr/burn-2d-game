@@ -583,16 +583,11 @@ private void initLevel(){
              case 9 ->{
                 addEnemy(75,494,"Knife");
                 addEnemy(184,494,"Knife");
-                addEnemy(338,501,"Knife");
-                addEnemy(443,490,"Knife");
                 addEnemy(1849,717,"Knife");
                 addEnemy(1677,780,"Pistol");
                 addEnemy(1775,463,"Pistol");
-                addEnemy(1340,797,"Pistol");
-                addEnemy(1462,791,"Pistol");
-                addEnemy(1176,805,"Pistol");
-                addEnemy(986,826,"Pistol");
-                addEnemy(1885,810,"Rifle");
+                addEnemy(1476,805,"Pistol");
+                addEnemy(1386,826,"Pistol");
                 addEnemy(1892,453,"Rifle");
 
 
@@ -604,8 +599,6 @@ private void initLevel(){
 
              }
              case 13 ->{
-                addEnemy(1230,1315,"Knife");
-                    addEnemy(1213,1528,"Knife");
                     addEnemy(1868,363,"Knife");
                     addEnemy(1067,372,"Knife"); 
                     addEnemy(742,70,"Pistol");
@@ -613,20 +606,16 @@ private void initLevel(){
                     addEnemy(162,1266,"Rifle");
                     addEnemy(1373,922,"Rifle");
                     addEnemy(872,929,"Rifle");
-                    addEnemy(242,939,"Rifle");
-                    addEnemy(592,924,"Rifle");
+
 
              }
              case 14 ->{
                  addEnemy(1231,660,"Pistol");
-                    addEnemy(1247,867,"Pistol");
                     addEnemy(1226,1148,"Pistol");
                     addEnemy(1049,248,"Pistol");
                     addEnemy(916,1600,"Pistol");
                     addEnemy(2349,180,"Pistol");
                     addEnemy(2152,1613,"Pistol");
-                    addEnemy(1724,237,"Rifle");
-                    addEnemy(1416,262,"Rifle");
                     addEnemy(1459,1592,"Rifle");
                     addEnemy(2132,1326,"Rifle");
              }
@@ -635,7 +624,6 @@ private void initLevel(){
                     addEnemy(109,869,"Pistol");   
                     addEnemy(913,829,"Rifle");
                     addEnemy(729,408,"Rifle");
-                    addEnemy(1149,811,"Rifle");
                     addEnemy(1763,181,"Rifle");
                     addEnemy(1194,116,"Rifle");
                     addEnemy(2082,606,"Rifle");
