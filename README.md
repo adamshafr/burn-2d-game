@@ -10,19 +10,34 @@ Players progress through a linear sequence of levels, encountering enemies, boss
 
 ## How to Run the Game
 
-1. Download or clone the repository
-2. Make sure **JDK 25 or newer** is installed. It can be downloaded here: https://www.oracle.com/java/technologies/downloads/#java25
-4. Extract the ZIP and either:
-   - Double-click **Burn.jar**, or
-   - Run the following command from the project folder:
+### Option 1: Run the Standalone Release (Recommended)
+1. Go to the **Releases** page on this repository.
+2. Download **`Burn.release.jar`**.
+3. Make sure **Java 21 or newer** is installed.  
+   Download Java here: https://www.oracle.com/java/technologies/downloads/#java25
+4. Run the game by either:
+   - Double-clicking `Burn.release.v1.0.jar`, or
+   - Running the following command in the folder containing the JAR:
      ```bash
-     java -jar Burn.jar
+     java -jar Burn.release.v1.0.jar
      ```
-5. Choose your difficulty and click the play button
-6. Look at the current objective in the bottom right corner to figure out what to do
-   **"Burn Legacy" is the version of the game made for the school project in the span of a month. "Burn" is the latest copy of the game.**
+5. Choose your difficulty and click **Play**.
+6. Follow the current objective shown in the bottom-right corner of the screen.
 
-> The asset folders must remain in the same directory as `Burn.jar`.
+> This release JAR is fully standalone and ready to play.
+
+---
+
+### Option 2: Run from Source
+1. Download or clone this repository.
+2. Make sure **JDK 21 or newer** is installed.
+3. Build and run the project using your IDE or the command line.
+
+---
+
+## Running legacy version
+ - If you would like to run the original version of the game (the one originally submitted for the school project in January 2025) simply run **Burn Legacy.jar**
+---
 
 ## Controls
 **W A S D** – Move  
