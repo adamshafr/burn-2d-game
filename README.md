@@ -36,7 +36,7 @@ Players progress through a linear sequence of levels, encountering enemies, boss
 ---
 
 ## Running legacy version
- - If you would like to run the original version of the game (the one originally submitted for the school project in January 2025) simply run **Burn Legacy.jar**
+ - If you would like to run the original version of the game (the one originally submitted for the school project in January 2025) simply run **Legacy-Burn.jar**
 ---
 
 ## Controls
