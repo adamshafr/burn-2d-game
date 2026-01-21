@@ -97,4 +97,4 @@ Some levels currently use placeholder layout backgrounds that clearly display le
 All gameplay systems, collision detection, progression logic, and story flow are fully implemented. The game is playable from start to finish, with placeholder layouts ensuring that all mechanics and level functionality remain clear and fully functional.
 
 ## Development Notes
-Burn was developed under a short time constraint (~1 month) with a strong focus on completing a fully playable, story-driven experience rather than a purely technical demo or prototype.
+The legacy version of Burn was developed under a short time constraint (~1 month) with a strong focus on completing a fully playable, story-driven experience rather than a purely technical demo or prototype.
